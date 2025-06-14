@@ -28,43 +28,29 @@ typedef const char* (__stdcall* Plat_CommandLineParamValue_t)(const char* param)
 Plat_CommandLineParamValue_t fpOriginalPlat_CommandLineParamValue = nullptr;
 
 const char* __stdcall Hooked_Plat_CommandLineParamValue(const char* param) {
-    if (strcmp(param, "-devtools-port") == 0) {
+    if (strcmp(param, "-devtools-port") == 0) 
         return "9222";
-    }
-
+    
     return fpOriginalPlat_CommandLineParamValue(param);
 }
 
 VOID HandleTier0Dll(PVOID moduleBaseAddress) {
-    if (MH_Initialize() != MH_OK) {
-        std::cerr << "Failed to initialize MinHook!" << std::endl;
+    if (MH_Initialize() != MH_OK) 
         return;
-    }
-
+    
     HMODULE hModule = (HMODULE)moduleBaseAddress;
     FARPROC pFunc = GetProcAddress(hModule, "Plat_CommandLineParamValue");
 
-    if (pFunc == nullptr) {
-        std::cerr << "Failed to find Plat_CommandLineParamValue in tier0_s.dll" << std::endl;
+    if (pFunc == nullptr) 
         return;
-    }
-
-    if (MH_CreateHook(
-            reinterpret_cast<LPVOID>(pFunc), 
-            reinterpret_cast<LPVOID>(&Hooked_Plat_CommandLineParamValue), 
-            reinterpret_cast<LPVOID*>(&fpOriginalPlat_CommandLineParamValue)
-        ) != MH_OK) {
-        std::cerr << "Failed to create hook!" << std::endl;
+    
+    if (MH_CreateHook(reinterpret_cast<LPVOID>(pFunc), reinterpret_cast<LPVOID>(&Hooked_Plat_CommandLineParamValue), reinterpret_cast<LPVOID*>(&fpOriginalPlat_CommandLineParamValue)) != MH_OK) 
         return;
-    }
-
-    if (MH_EnableHook(reinterpret_cast<LPVOID>(pFunc)) != MH_OK) {
-        std::cerr << "Failed to enable hook!" << std::endl;
+    
+    if (MH_EnableHook(reinterpret_cast<LPVOID>(pFunc)) != MH_OK) 
         return;
-    }
 }
 
-// Callback function
 VOID CALLBACK DllNotificationCallback(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context) {
     if (NotificationReason == LDR_DLL_NOTIFICATION_REASON_LOADED) {
         std::wstring dllName(
@@ -79,24 +65,17 @@ VOID CALLBACK DllNotificationCallback(ULONG NotificationReason, PLDR_DLL_NOTIFIC
 }
 
 bool InitializeDllNotification() {
-    AllocConsole(); 
-    freopen("CONOUT$", "w", stdout);
-    freopen("CONOUT$", "w", stderr);
-
-    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
-    if (!ntdll) {
+    HMODULE ntdllModule = GetModuleHandleA("ntdll.dll");
+    if (!ntdllModule) 
         return false;
-    }
     
-    LdrRegisterDllNotification = (LdrRegisterDllNotification_t)GetProcAddress(ntdll, "LdrRegisterDllNotification");
-    LdrUnregisterDllNotification = (LdrUnregisterDllNotification_t)GetProcAddress(ntdll, "LdrUnregisterDllNotification");
+    LdrRegisterDllNotification = (LdrRegisterDllNotification_t)GetProcAddress(ntdllModule, "LdrRegisterDllNotification");
+    LdrUnregisterDllNotification = (LdrUnregisterDllNotification_t)GetProcAddress(ntdllModule, "LdrUnregisterDllNotification");
     
-    if (!LdrRegisterDllNotification || !LdrUnregisterDllNotification) {
+    if (!LdrRegisterDllNotification || !LdrUnregisterDllNotification) 
         return false;
-    }
     
-    NTSTATUS status = LdrRegisterDllNotification(0, DllNotificationCallback, nullptr, &g_NotificationCookie);
-    return NT_SUCCESS(status);
+    return NT_SUCCESS(LdrRegisterDllNotification(0, DllNotificationCallback, nullptr, &g_NotificationCookie));
 }
 
 void CleanupDllNotification() {
