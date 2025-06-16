@@ -37,6 +37,7 @@
 #include <asio.hpp>
 #include <asio/ip/tcp.hpp>
 #include "MinHook.h"
+#include <bits/this_thread_sleep.h>
 #define LDR_DLL_NOTIFICATION_REASON_LOADED   1
 #define DEFAULT_DEVTOOLS_PORT "8080"
 
@@ -58,11 +59,14 @@ LdrUnregisterDllNotification_t LdrUnregisterDllNotification = nullptr;
 PVOID g_NotificationCookie = nullptr;
 
 typedef LPCSTR (__attribute__((__cdecl__))* Plat_CommandLineParamValue_t)(LPCSTR param);
-// No idea why then made this return a char? boolean and char are the same size on x86/x64, so this is useless.
 typedef CHAR (__attribute__((__cdecl__))* Plat_CommandLineParamExists_t)(LPCSTR param); 
+
+// No idea why then made this return a char? boolean and char are the same size on x86/x64, so this is useless.
+typedef INT (__attribute__((__cdecl__))* CreateSimpleProcess_t)(LPCCH commandLine, CHAR arg2);
 
 Plat_CommandLineParamValue_t fpOriginalPlat_CommandLineParamValue = nullptr;
 Plat_CommandLineParamExists_t fpPlat_CommandLineParamExists = nullptr;
+CreateSimpleProcess_t fpCreateSimpleProcess = nullptr;
 
 asio::ip::port_type GetRandomOpenPort() {
     asio::io_context io_context;
@@ -92,15 +96,59 @@ LPCSTR Hooked_Plat_CommandLineParamValue(LPCSTR param) {
     return fpOriginalPlat_CommandLineParamValue(param);
 }
 
+LPCSTR SecurityBlockRemoteOrigins(LPCSTR cmd) {
+    if (!cmd) return nullptr;
+    std::string input(cmd);
+
+    size_t start = input.find('"');
+    if (start == std::string::npos) return strdup(cmd); 
+
+    size_t end = input.find('"', start + 1);
+    if (end == std::string::npos) return strdup(cmd);
+
+    std::string exePath = input.substr(start + 1, end - start - 1);
+    std::string exePathLower = exePath;
+    for (auto& c : exePathLower) c = static_cast<char>(tolower(c));
+
+    if (exePathLower.find("steamwebhelper.exe") == std::string::npos) {
+        PCHAR out = new CHAR[input.size() + 1];
+        std::strcpy(out, cmd);
+        return out;
+    }
+
+    std::string target = "--remote-allow-origins=*";
+    size_t pos = input.find(target);
+    if (pos != std::string::npos) {
+        input.replace(pos, target.size(), R"(--remote-allow-origins=\"\")");
+    }
+
+    PCHAR out = new CHAR[input.size() + 1];
+    std::strcpy(out, input.c_str());
+    return out;
+}
+
+INT Hooked_CreateSimpleProcess(LPCCH commandLine, CHAR arg2) {
+    if (fpPlat_CommandLineParamExists != nullptr && !fpPlat_CommandLineParamExists("-dev"))
+        commandLine = SecurityBlockRemoteOrigins(commandLine);
+    
+    return fpCreateSimpleProcess(commandLine, arg2);
+}
+
 VOID HandleTier0Dll(PVOID moduleBaseAddress) {
     if (MH_Initialize() != MH_OK) return;
     
     steamTier0Module = (HMODULE)moduleBaseAddress;
-    FARPROC pFunc = GetProcAddress(steamTier0Module, "Plat_CommandLineParamValue");
+    FARPROC Plat_CommandLineParamValue = GetProcAddress(steamTier0Module, "Plat_CommandLineParamValue");
+    FARPROC CreateSimpleProcess = GetProcAddress(steamTier0Module, "CreateSimpleProcess");
 
-    if (pFunc == nullptr) return;
-    if (MH_CreateHook(reinterpret_cast<LPVOID>(pFunc), reinterpret_cast<LPVOID>(&Hooked_Plat_CommandLineParamValue), reinterpret_cast<LPVOID*>(&fpOriginalPlat_CommandLineParamValue)) != MH_OK) return;
-    if (MH_EnableHook(reinterpret_cast<LPVOID>(pFunc)) != MH_OK) return;
+    if (Plat_CommandLineParamValue != nullptr) 
+        if (MH_CreateHook(reinterpret_cast<LPVOID>(Plat_CommandLineParamValue), reinterpret_cast<LPVOID>(&Hooked_Plat_CommandLineParamValue), reinterpret_cast<LPVOID*>(&fpOriginalPlat_CommandLineParamValue)) != MH_OK) return;
+
+    if (CreateSimpleProcess != nullptr) 
+        if (MH_CreateHook(reinterpret_cast<LPVOID>(CreateSimpleProcess), reinterpret_cast<LPVOID>(&Hooked_CreateSimpleProcess), reinterpret_cast<LPVOID*>(&fpCreateSimpleProcess)) != MH_OK) return;
+
+
+    if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) return;
 }
 
 VOID CALLBACK DllNotificationCallback(ULONG NotificationReason, PLDR_DLL_NOTIFICATION_DATA NotificationData, PVOID Context) {

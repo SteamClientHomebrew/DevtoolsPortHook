@@ -8,9 +8,8 @@ set(SRC
   src/exports.def 
 )
 
-
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/vendor/detours
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -54,7 +53,7 @@ add_library(MillenniumProxy SHARED ${SRC})
 find_package(asio CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 
-target_link_libraries(MillenniumProxy PRIVATE minhook::minhook version asio::asio wsock32 ws2_32)
+target_link_libraries(MillenniumProxy PRIVATE wbemuuid ole32 oleaut32 minhook::minhook version asio::asio wsock32 ws2_32)
 
 set_target_properties(MillenniumProxy PROPERTIES OUTPUT_NAME "version")
 set_target_properties(MillenniumProxy PROPERTIES PREFIX "")

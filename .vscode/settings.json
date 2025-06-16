@@ -91,6 +91,7 @@
     "set": "cpp",
     "source_location": "cpp",
     "strstream": "cpp",
-    "xtree": "cpp"
+    "xtree": "cpp",
+    "resumable": "cpp"
   }
 }
