@@ -13,6 +13,14 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/vendor/detours
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  if(NOT UNIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
+endif()
+
 if(WIN32 AND NOT GITHUB_ACTION_BUILD)
   execute_process(
     COMMAND reg query "HKCU\\Software\\Valve\\Steam" /v "SteamPath"
@@ -42,8 +50,11 @@ endif()
 
 add_library(MillenniumProxy SHARED ${SRC})
 
+
+find_package(asio CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
-target_link_libraries(MillenniumProxy PRIVATE minhook::minhook version)
+
+target_link_libraries(MillenniumProxy PRIVATE minhook::minhook version asio::asio wsock32 ws2_32)
 
 set_target_properties(MillenniumProxy PROPERTIES OUTPUT_NAME "version")
 set_target_properties(MillenniumProxy PROPERTIES PREFIX "")
