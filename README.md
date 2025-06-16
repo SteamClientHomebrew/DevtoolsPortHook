@@ -15,8 +15,3 @@ Using MinGW, we can implement proxying without static linking. For each function
 `GetFileVersionInfoA="C:\\Windows\\System32\\version".GetFileVersionInfoA`
 
 By implementing this pattern for each exported function, we can safely intercept or observe behavior while preserving the functionality expected by Steam.
-
-## Can this get me banned?
-
-I don't know, and I'm not responsible if you are. This method can be seen as suspicious behavior from anti-cheats.
-Furthermore, its entirely possible some anti-cheats have heuristic detections for min-hook as its commonly used in game cheats.
