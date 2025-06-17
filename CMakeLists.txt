@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
+
 project(MillenniumProxy CXX)
+project(PraesidiumSentinel CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -47,14 +49,18 @@ if(WIN32 AND NOT GITHUB_ACTION_BUILD)
 endif()
 
 
-add_library(MillenniumProxy SHARED ${SRC})
-
+add_library(MillenniumProxy SHARED  src/exports.def src/dummy.cc)
+add_library(PraesidiumSentinel SHARED src/main.cc)
 
 find_package(asio CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 
-target_link_libraries(MillenniumProxy PRIVATE wbemuuid ole32 oleaut32 minhook::minhook version asio::asio wsock32 ws2_32)
+target_link_libraries(PraesidiumSentinel PRIVATE wbemuuid ole32 oleaut32 minhook::minhook version asio::asio wsock32 ws2_32)
 
 set_target_properties(MillenniumProxy PROPERTIES OUTPUT_NAME "version")
 set_target_properties(MillenniumProxy PROPERTIES PREFIX "")
 set_target_properties(MillenniumProxy PROPERTIES NO_EXPORT TRUE)
+
+set_target_properties(PraesidiumSentinel PROPERTIES OUTPUT_NAME "praesidium.sentinel")
+set_target_properties(PraesidiumSentinel PROPERTIES PREFIX "")
+set_target_properties(PraesidiumSentinel PROPERTIES NO_EXPORT TRUE)

@@ -147,7 +147,6 @@ VOID HandleTier0Dll(PVOID moduleBaseAddress) {
     if (CreateSimpleProcess != nullptr) 
         if (MH_CreateHook(reinterpret_cast<LPVOID>(CreateSimpleProcess), reinterpret_cast<LPVOID>(&Hooked_CreateSimpleProcess), reinterpret_cast<LPVOID*>(&fpCreateSimpleProcess)) != MH_OK) return;
 
-
     if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) return;
 }
 
