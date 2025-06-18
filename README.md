@@ -1,6 +1,6 @@
-# Devtools Port Hook
+# Praesidium Sentinel
 
-This project is not currently used within Millennium. It is simply a POC that shows this _is_ possible.
+This project is sentinel for Praesidium. It randomized port selection of the Chrome Developer Tools, and enabled CORS.  
 
 ## How does it work?
 
